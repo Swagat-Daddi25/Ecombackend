@@ -30,9 +30,12 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const helmet = require("helmet");
+// const sendMail = require("./gmail");
 const dotenv = require("dotenv");
 dotenv.config();
 const { rateLimit } = require("express-rate-limit");
+const nodemailer = require("nodemailer");
 const app = express();
 const port = process.env.PORT;
 let secretkey = process.env.SECRETKEY;
@@ -80,6 +83,7 @@ const limiter = rateLimit({
 app.use(cors());
 app.use(limiter);
 app.use(express.json());
+app.use(helmet());
 
 // dispaly an message
 // app.get('/fact', (req, res) => {
@@ -119,6 +123,24 @@ app.post("/products", async (req, res) => {
     const { title, price, image } = req.body;
     await productsmodel.create({ title, price, image });
     res.status(201).json({ msg: "products are added succesfuly" });
+    let transporter = await nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+
+    let mailOptions = {
+      from: process.env.GMAIL_USER,
+      to: "daddiswagat@gmail.com",
+      subject: "PRODUCT  REGISTRATION",
+      html: `new product added in our store`,
+    };
+    transporter.sendMail(mailOptions, (error) => {
+      if (error) throw error;
+      console.log("product recieved  successfully");
+    });
   } catch (error) {
     res.json({
       msg: error.message,
@@ -136,6 +158,13 @@ app.get("/products", async (req, res) => {
       mes: error.message,
     });
   }
+});
+
+app.get("/details", (req, res) => {
+  let location = req.query.location;
+  let age = req.query.age;
+  let company = req.query.company;
+  res.send(`my location is ${location}, age is ${age}, company is ${company}`);
 });
 
 // delete
@@ -177,7 +206,26 @@ app.post("/register", async (req, res) => {
     //hashing password
     let hashedpassword = await bcrypt.hash(password, 10);
     finalusers.create({ email, username, password: hashedpassword });
+    // await sendMail(email, username);
     res.status(201).json({ msg: "user registered successfully" });
+    let transporter = await nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+
+    let mailOptions = {
+      from: process.env.GMAIL_USER,
+      to: email,
+      subject: "ACCOUNT REGISTRATION",
+      html: `Hi ${username}  your account is created`,
+    };
+    transporter.sendMail(mailOptions, (error) => {
+      if (error) throw error;
+      console.log("email sent successfully");
+    });
   } catch (error) {
     res.json({
       msg: error.message,
@@ -205,6 +253,12 @@ app.post("/login", async (req, res) => {
       msg: error.message,
     });
   }
+});
+
+app.get("/products/:id", async (req, res) => {
+  id = req.params.id;
+  let singleproduct = await productsmodel.findById(id);
+  res.json(singleproduct);
 });
 // demo
 // async function hashing(){
