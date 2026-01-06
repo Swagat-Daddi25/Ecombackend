@@ -140,6 +140,7 @@ app.post("/products", async (req, res) => {
     transporter.sendMail(mailOptions, (error) => {
       if (error) throw error;
       console.log("product recieved  successfully");
+      console.log("Hi");
     });
   } catch (error) {
     res.json({
